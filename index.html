@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1220">
+<title>1PXL Soccer Game Tracker</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<section id="setup-screen" class="screen">
+  <h1>1PXL Soccer Game Tracker</h1>
+  <label>Home team
+    <input id="home-input" type="text" autocomplete="off" placeholder="Home" maxlength="24">
+  </label>
+  <label>Away team
+    <input id="away-input" type="text" autocomplete="off" placeholder="Away" maxlength="24">
+  </label>
+  <button id="start-match-btn" class="primary big">Start match</button>
+  <button id="resume-btn" class="secondary big" hidden>Resume saved match</button>
+</section>
+
+<section id="tracker-screen" class="screen" hidden>
+  <header id="scoreboard">
+    <div class="team-box home">
+      <button class="name editable" id="home-name" title="Tap to rename">Home</button>
+      <div class="score" id="home-score">0</div>
+    </div>
+    <div class="middle">
+      <div class="period" id="period-label">1st</div>
+      <div class="clock" id="clock">00:00</div>
+    </div>
+    <div class="team-box away">
+      <button class="name editable" id="away-name" title="Tap to rename">Away</button>
+      <div class="score" id="away-score">0</div>
+    </div>
+  </header>
+
+  <div class="clock-controls">
+    <button id="startpause-btn" class="primary">Start</button>
+    <button id="endperiod-btn" class="secondary">End period</button>
+  </div>
+
+  <div class="event-grid">
+    <div class="col home">
+      <button class="evt goal" data-team="home" data-type="goal">Goal</button>
+      <button class="evt yellow" data-team="home" data-type="yellow">Yellow</button>
+      <button class="evt red" data-team="home" data-type="red">Red</button>
+    </div>
+    <div class="col away">
+      <button class="evt goal" data-team="away" data-type="goal">Goal</button>
+      <button class="evt yellow" data-team="away" data-type="yellow">Yellow</button>
+      <button class="evt red" data-team="away" data-type="red">Red</button>
+    </div>
+  </div>
+
+  <div class="feed-header">
+    <span>Recent events</span>
+    <button id="undo-btn" class="tiny">Undo last</button>
+  </div>
+  <ul id="event-feed"></ul>
+
+  <div class="export-row">
+    <button id="export-csv-btn" class="secondary">Export CSV</button>
+    <button id="export-json-btn" class="secondary">Export JSON</button>
+    <button id="reset-btn" class="danger tiny">Reset match</button>
+  </div>
+</section>
+
+<div id="edit-modal" class="modal" hidden>
+  <div class="modal-card">
+    <h2 id="edit-title">Edit event</h2>
+    <label>Team
+      <select id="edit-team">
+        <option value="home">Home</option>
+        <option value="away">Away</option>
+      </select>
+    </label>
+    <label>Type
+      <select id="edit-type">
+        <option value="goal">Goal</option>
+        <option value="yellow">Yellow card</option>
+        <option value="red">Red card</option>
+      </select>
+    </label>
+    <label>Period
+      <select id="edit-period">
+        <option value="1">1st</option>
+        <option value="2">2nd</option>
+      </select>
+    </label>
+    <label>Match clock (mm:ss)
+      <input id="edit-clock" type="text" inputmode="numeric" placeholder="12:34" maxlength="5">
+    </label>
+    <div class="modal-row">
+      <button id="edit-delete" class="danger">Delete</button>
+      <button id="edit-cancel" class="secondary">Cancel</button>
+      <button id="edit-save" class="primary">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
