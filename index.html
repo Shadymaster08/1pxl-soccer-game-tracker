@@ -11,12 +11,21 @@
 
 <section id="setup-screen" class="screen">
   <h1>1PXL Soccer Game Tracker</h1>
+  <div id="games-box" hidden>
+    <div class="games-head">
+      <span>Division 1 games</span>
+      <select id="games-date" aria-label="Game night"></select>
+    </div>
+    <div id="games-list"></div>
+    <p id="games-note"></p>
+  </div>
   <label>Home team
-    <input id="home-input" type="text" autocomplete="off" placeholder="Home" maxlength="24">
+    <input id="home-input" type="text" autocomplete="off" placeholder="Home" maxlength="40" list="team-list">
   </label>
   <label>Away team
-    <input id="away-input" type="text" autocomplete="off" placeholder="Away" maxlength="24">
+    <input id="away-input" type="text" autocomplete="off" placeholder="Away" maxlength="40" list="team-list">
   </label>
+  <datalist id="team-list"></datalist>
   <button id="start-match-btn" class="primary big">Start match</button>
   <button id="resume-btn" class="secondary big" hidden>Resume saved match</button>
 </section>
@@ -101,6 +110,7 @@
   </div>
 </div>
 
+<script src="league.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

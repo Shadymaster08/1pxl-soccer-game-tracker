@@ -258,3 +258,23 @@ button:disabled { opacity: 0.5; }
   gap: 8px;
   margin-top: 8px;
 }
+
+/* League games on the setup screen */
+#games-box { display: flex; flex-direction: column; gap: 8px; }
+#games-box[hidden] { display: none; }
+.games-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--muted); }
+#games-date {
+  background: var(--panel); color: var(--text); border: 1px solid var(--border);
+  border-radius: 10px; padding: 8px 10px; font-size: 15px; font-family: inherit;
+}
+#games-date[hidden] { display: none; }
+#games-list { display: flex; flex-direction: column; gap: 8px; }
+#games-list .game {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  background: var(--panel); border: 1px solid var(--border); min-height: 64px; padding: 10px 14px;
+}
+#games-list .game.picked { border-color: var(--home); background: var(--panel-2); outline: 2px solid var(--home); }
+#games-list .when { font-size: 13px; font-weight: 500; color: var(--muted); }
+#games-list .teams { font-size: 16px; }
+#games-note { margin: 0; font-size: 13px; color: var(--muted); }
+#games-note:empty { display: none; }

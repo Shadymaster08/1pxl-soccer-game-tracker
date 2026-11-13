@@ -10,7 +10,7 @@ Repo: https://github.com/Shadymaster08/1pxl-soccer-game-tracker (private)
 
 ## Stack & running it
 
-No build step. Three files: `index.html`, `styles.css`, `app.js`. Open `index.html` directly in a browser, or serve the folder statically (`python3 -m http.server`, etc.). No dependencies, no tests, no linter.
+No build step. Four files: `index.html`, `styles.css`, `app.js`, `league.js` (setup-screen list of Division 1 games read from kingsleague.ca; the picked game is exported as `league` in the JSON). Open `index.html` directly in a browser, or serve the folder statically (`python3 -m http.server`, etc.). No dependencies, no tests, no linter.
 
 ## Architecture
 

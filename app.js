@@ -14,6 +14,7 @@ const state = {
   running: false,
   events: [],
   matchStartedWallClock: null,
+  league: null,
 };
 
 function save() {
@@ -292,6 +293,7 @@ function exportJSON() {
   const payload = {
     version: 1,
     teams: { home: state.home, away: state.away },
+    league: state.league || null,
     finalScore: score,
     matchStartedWallClock: state.matchStartedWallClock,
     exportedAt: new Date().toISOString(),
@@ -385,6 +387,7 @@ document.addEventListener("DOMContentLoaded", () => {
       running: false,
       events: [],
       matchStartedWallClock: null,
+      league: leagueSelection(home, away),
     });
     save();
     showTracker();
