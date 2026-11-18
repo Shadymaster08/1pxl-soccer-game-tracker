@@ -183,11 +183,13 @@ button:disabled { opacity: 0.5; }
 #event-feed li {
   font-size: 14px;
   display: grid;
-  grid-template-columns: 60px auto 1fr;
+  grid-template-columns: 60px auto 1fr auto;
   gap: 8px;
   padding: 4px 6px;
   align-items: center;
 }
+#event-feed.full { max-height: none; }
+#event-feed li .wall { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 #event-feed li .t { color: var(--muted); font-variant-numeric: tabular-nums; }
 #event-feed li .tag {
   font-size: 11px;
@@ -278,3 +280,10 @@ button:disabled { opacity: 0.5; }
 #games-list .teams { font-size: 16px; }
 #games-note { margin: 0; font-size: 13px; color: var(--muted); }
 #games-note:empty { display: none; }
+
+/* Publish to Drive */
+#publish-btn { margin-top: 12px; width: 100%; }
+#publish-btn.done { background: #15803d; }
+#publish-note { margin: 6px 2px 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+#publish-note.ok { color: #4ade80; }
+#publish-note.warn { color: #fbbf24; }

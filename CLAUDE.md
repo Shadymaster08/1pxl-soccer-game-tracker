@@ -20,6 +20,10 @@ The match clock is derived, not stored ticking: `currentMatchClockMs()` = `perio
 
 Every event carries **both** a match-clock offset (`matchClockMs`, relative to the current period) and an ISO `wallClock`. CSV export uses wall-clock deltas from the first event to emit Premiere-compatible timecodes so markers line up with camera footage regardless of when recording started.
 
+## Publish to Drive
+
+`publishToDrive()` POSTs `{key, game: buildExport()}` (as text/plain, so no CORS preflight) to `PUBLISH_URL`, a Google Apps Script web app made from `drive-publish/Code.gs` and deployed in the info@1pxlstudio.com account ("Execute as me", "Anyone"). The script saves the game as `TKL 27/Week <n>/Scores/<yyyy-MM-dd HHmm> HOME vs AWAY.json` (week from the date; same kick-off minute = same file, replaced). The app publishes by itself at full time, retries every 30 s / when back online until Drive confirms, and shows "changed since published" after edits. `PUBLISH_KEY` must match `KEY` in Code.gs; it is visible in the page source, so the script only accepts well-formed game files and never deletes anything. The TKL Highlights tool reads every .json inside the week folders, so nothing else is needed on its side.
+
 ## Editing user mistakes
 
 - Tap either team name in the scoreboard to rename mid-match (uses `prompt()`).

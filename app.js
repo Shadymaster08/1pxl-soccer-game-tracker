@@ -1,6 +1,9 @@
 "use strict";
 
 const STORAGE_KEY = "beer-league-scorekeeper:v1";
+// "Publish to Drive": the web app made from drive-publish/Code.gs in the info@1pxlstudio.com account.
+const PUBLISH_URL = "https://script.google.com/macros/s/AKfycbyiFEbC7WlGKOqesnbWQRf1BunBVCYaH3dstejhmJa9O84kzK1FKByaSlfZacaKUFY78A/exec";
+const PUBLISH_KEY = "fJ4NFZqYEZK28uO_XsQTz-s";
 const PERIOD_LABELS = { 1: "1st", 2: "2nd", 3: "Full Time" };
 
 const $ = (id) => document.getElementById(id);
@@ -57,6 +60,13 @@ function formatClock(ms) {
   return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
 }
 
+function formatTimeOfDay(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 function computeScore() {
   let h = 0, a = 0;
   for (const e of state.events) {
@@ -96,7 +106,9 @@ function renderControls() {
 function renderFeed() {
   const feed = $("event-feed");
   feed.innerHTML = "";
-  const latest = state.events.slice(-12).reverse();
+  // every event, newest first, so a screenshot of the list can stand in for a lost export
+  feed.classList.toggle("full", state.period > 2);
+  const latest = state.events.slice().reverse();
   for (const e of latest) {
     const li = document.createElement("li");
     const isSystem = e.team === null;
@@ -113,7 +125,10 @@ function renderFeed() {
     tag.textContent = isSystem ? `P${e.period}` : e.team.toUpperCase();
     const desc = document.createElement("span");
     desc.textContent = describe(e) + (isEditable ? "  ✎" : "");
-    li.append(t, tag, desc);
+    const wall = document.createElement("span");
+    wall.className = "wall";
+    wall.textContent = formatTimeOfDay(e.wallClock);
+    li.append(t, tag, desc, wall);
     feed.appendChild(li);
   }
 }
@@ -135,6 +150,7 @@ function renderAll() {
   renderClock();
   renderControls();
   renderFeed();
+  renderPublish();
 }
 
 // ---------- Event actions ----------
@@ -181,6 +197,7 @@ function endPeriod() {
   state.periodElapsedMs = 0;
   save();
   renderAll();
+  if (state.period === 3) publishToDrive();          // full time: the scores go to Drive by themselves
 }
 
 function undoLast() {
@@ -265,7 +282,9 @@ function deleteEdit() {
 }
 
 function resetMatch() {
-  if (!confirm("Reset this match? All events will be lost.")) return;
+  const unsent = PUBLISH_URL && state.events.length && publishState() !== "done";
+  if (!confirm(unsent ? "This game is NOT on Drive yet. Reset anyway? All events will be lost."
+                      : "Reset this match? All events will be lost.")) return;
   localStorage.removeItem(STORAGE_KEY);
   location.reload();
 }
@@ -288,9 +307,9 @@ function safeSlug(s) {
   return (s || "match").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase() || "match";
 }
 
-function exportJSON() {
+function buildExport() {
   const score = computeScore();
-  const payload = {
+  return {
     version: 1,
     teams: { home: state.home, away: state.away },
     league: state.league || null,
@@ -299,8 +318,77 @@ function exportJSON() {
     exportedAt: new Date().toISOString(),
     events: state.events,
   };
+}
+
+function exportJSON() {
   const fname = `${safeSlug(state.home)}-vs-${safeSlug(state.away)}.json`;
-  download(fname, "application/json", JSON.stringify(payload, null, 2));
+  download(fname, "application/json", JSON.stringify(buildExport(), null, 2));
+}
+
+// ---------- Publish to Drive ----------
+// The game goes to TKL 27/Week <n>/Scores on Google Drive. Until Drive has confirmed it, the game stays
+// "not published": the app tries again every 30 s and as soon as the phone is back online.
+
+let publishing = false;
+let publishTimer = null;
+
+function changeStamp() {
+  return JSON.stringify([state.home, state.away, state.events]);
+}
+
+function publishState() {
+  if (!state.events.length) return "nothing";
+  if (publishing) return "sending";
+  if (state.published && state.published.stamp === changeStamp()) return "done";
+  return state.published ? "changed" : "waiting";
+}
+
+function renderPublish() {
+  const btn = $("publish-btn"), note = $("publish-note");
+  if (!btn) return;
+  const st = publishState();
+  btn.disabled = st === "nothing" || st === "sending" || !PUBLISH_URL;
+  btn.textContent = st === "sending" ? "Publishing…" : st === "done" ? "Published to Drive ✓" : "Publish to Drive";
+  btn.classList.toggle("done", st === "done");
+  let text = "";
+  if (!PUBLISH_URL) text = "Publishing is not set up in this version of the app: use Export JSON.";
+  else if (st === "done") text = `Saved on Drive at ${formatTimeOfDay(state.published.at)}: ${state.published.path}`;
+  else if (st === "changed") text = "Changed since it was published: press Publish to Drive again.";
+  else if (state.publishError) text = `Not on Drive yet (${state.publishError}). Trying again automatically…`;
+  note.textContent = text;
+  note.className = st === "done" ? "ok" : state.publishError || st === "changed" ? "warn" : "";
+}
+
+async function publishToDrive() {
+  if (!PUBLISH_URL || publishing || !state.events.length) return;
+  const stamp = changeStamp();
+  publishing = true;
+  renderPublish();
+  try {
+    // text/plain keeps it a "simple" request, which Google's web apps accept from any page
+    const r = await fetch(PUBLISH_URL, {
+      method: "POST",
+      body: JSON.stringify({ key: PUBLISH_KEY, game: buildExport() }),
+    });
+    const answer = await r.json();
+    if (!answer.ok) throw new Error(answer.error || "Drive refused it");
+    state.published = { stamp, at: new Date().toISOString(), path: answer.path };
+    state.publishError = null;
+  } catch (e) {
+    state.publishError = navigator.onLine === false ? "no internet" : (e && e.message) || "could not reach Drive";
+  } finally {
+    publishing = false;
+    save();
+    renderPublish();
+    schedulePublishRetry();
+  }
+}
+
+function schedulePublishRetry() {
+  clearTimeout(publishTimer);
+  if (state.publishError && publishState() !== "done") {
+    publishTimer = setTimeout(publishToDrive, 30000);
+  }
 }
 
 function formatTimecode(totalSeconds, fps = 30) {
@@ -388,6 +476,8 @@ document.addEventListener("DOMContentLoaded", () => {
       events: [],
       matchStartedWallClock: null,
       league: leagueSelection(home, away),
+      published: null,
+      publishError: null,
     });
     save();
     showTracker();
@@ -399,6 +489,9 @@ document.addEventListener("DOMContentLoaded", () => {
   $("reset-btn").onclick = resetMatch;
   $("export-csv-btn").onclick = exportCSV;
   $("export-json-btn").onclick = exportJSON;
+  $("publish-btn").onclick = publishToDrive;
+  window.addEventListener("online", () => { if (state.publishError) publishToDrive(); });
+  schedulePublishRetry();
 
   for (const btn of document.querySelectorAll(".evt")) {
     btn.addEventListener("click", () => {
