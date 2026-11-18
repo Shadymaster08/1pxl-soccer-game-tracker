@@ -331,62 +331,101 @@ function exportJSON() {
 
 let publishing = false;
 let publishTimer = null;
+let publishStarted = 0;
+let retryAt = 0;
+let publishTick = null;
+let flash = "";                   // a one-off message, e.g. "Start the match first"
 
 function changeStamp() {
   return JSON.stringify([state.home, state.away, state.events]);
 }
 
 function publishState() {
-  if (!state.events.length) return "nothing";
   if (publishing) return "sending";
+  if (!state.events.length) return "nothing";
   if (state.published && state.published.stamp === changeStamp()) return "done";
+  if (state.publishError) return "error";
   return state.published ? "changed" : "waiting";
 }
 
+// What the status box under the button says, for each state: [icon, title, detail]
+function publishText(st) {
+  const secs = (t) => Math.max(0, Math.round((t - Date.now()) / 1000));
+  if (!PUBLISH_URL) return ["!", "Publishing is not set up", "Use Export JSON instead."];
+  switch (st) {
+    case "sending": return ["", "Sending to Drive…", `${Math.round((Date.now() - publishStarted) / 1000)} s — keep this page open`];
+    case "nothing": return ["i", "Nothing to send yet", flash || "Start the match first."];
+    case "done": return ["✓", "Saved on Drive", `${formatTimeOfDay(state.published.at)} · ${state.published.path}`];
+    case "error": return ["✗", "NOT on Drive", `${state.publishError}. ` +
+      (retryAt ? `Trying again in ${secs(retryAt)} s — or tap Publish to Drive now.` : "Tap Publish to Drive to try again.")];
+    case "changed": return ["!", "Changed since it was sent", "Tap Publish to Drive to send the new version."];
+    default: return ["i", "Not on Drive yet", "It is sent by itself at full time, or tap Publish to Drive."];
+  }
+}
+
 function renderPublish() {
-  const btn = $("publish-btn"), note = $("publish-note");
-  if (!btn) return;
+  const btn = $("publish-btn"), box = $("publish-status");
+  if (!btn || !box) return;
   const st = publishState();
-  btn.disabled = st === "nothing" || st === "sending" || !PUBLISH_URL;
-  btn.textContent = st === "sending" ? "Publishing…" : st === "done" ? "Published to Drive ✓" : "Publish to Drive";
-  btn.classList.toggle("done", st === "done");
-  let text = "";
-  if (!PUBLISH_URL) text = "Publishing is not set up in this version of the app: use Export JSON.";
-  else if (st === "done") text = `Saved on Drive at ${formatTimeOfDay(state.published.at)}: ${state.published.path}`;
-  else if (st === "changed") text = "Changed since it was published: press Publish to Drive again.";
-  else if (state.publishError) text = `Not on Drive yet (${state.publishError}). Trying again automatically…`;
-  note.textContent = text;
-  note.className = st === "done" ? "ok" : state.publishError || st === "changed" ? "warn" : "";
+  btn.disabled = st === "sending" || !PUBLISH_URL;
+  btn.textContent = st === "sending" ? "Sending…" : st === "done" ? "Send again" : "Publish to Drive";
+  const [icon, title, detail] = publishText(st);
+  box.className = "publish-status " + st;
+  box.querySelector(".icon").textContent = icon;
+  box.querySelector(".title").textContent = title;
+  box.querySelector(".detail").textContent = detail;
+  // the "sending" seconds and the retry countdown keep moving while they are on screen
+  clearInterval(publishTick);
+  if (st === "sending" || (st === "error" && retryAt)) publishTick = setInterval(renderPublish, 1000);
 }
 
 async function publishToDrive() {
-  if (!PUBLISH_URL || publishing || !state.events.length) return;
+  if (!PUBLISH_URL || publishing) return;
+  if (!state.events.length) {
+    flash = "Start the match first: there is nothing to send.";
+    renderPublish();
+    return;
+  }
+  flash = "";
   const stamp = changeStamp();
   publishing = true;
+  publishStarted = Date.now();
+  retryAt = 0;
+  clearTimeout(publishTimer);
   renderPublish();
+  const stop = new AbortController();
+  const timeout = setTimeout(() => stop.abort(), 30000);
   try {
     // text/plain keeps it a "simple" request, which Google's web apps accept from any page
     const r = await fetch(PUBLISH_URL, {
       method: "POST",
       body: JSON.stringify({ key: PUBLISH_KEY, game: buildExport() }),
+      signal: stop.signal,
     });
     const answer = await r.json();
     if (!answer.ok) throw new Error(answer.error || "Drive refused it");
     state.published = { stamp, at: new Date().toISOString(), path: answer.path };
     state.publishError = null;
+    if (navigator.vibrate) navigator.vibrate(80);
   } catch (e) {
-    state.publishError = navigator.onLine === false ? "no internet" : (e && e.message) || "could not reach Drive";
+    state.publishError = navigator.onLine === false ? "No internet"
+      : e && e.name === "AbortError" ? "Drive did not answer within 30 s"
+      : e instanceof TypeError ? "Could not reach Drive — check the phone's internet"
+      : (e && e.message) || "Could not reach Drive";
   } finally {
+    clearTimeout(timeout);
     publishing = false;
     save();
-    renderPublish();
     schedulePublishRetry();
+    renderPublish();
   }
 }
 
 function schedulePublishRetry() {
   clearTimeout(publishTimer);
-  if (state.publishError && publishState() !== "done") {
+  retryAt = 0;
+  if (state.publishError && publishState() === "error") {
+    retryAt = Date.now() + 30000;
     publishTimer = setTimeout(publishToDrive, 30000);
   }
 }

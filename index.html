@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b1220">
 <title>1PXL Soccer Game Tracker</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
@@ -71,7 +71,10 @@
   <ul id="event-feed"></ul>
 
   <button id="publish-btn" class="primary big publish">Publish to Drive</button>
-  <p id="publish-note"></p>
+  <div id="publish-status" class="publish-status" role="status" aria-live="polite">
+    <span class="icon"></span>
+    <div><div class="title"></div><div class="detail"></div></div>
+  </div>
 
   <div class="export-row">
     <button id="export-csv-btn" class="secondary">Export CSV</button>
@@ -113,7 +116,7 @@
   </div>
 </div>
 
-<script src="league.js"></script>
-<script src="app.js"></script>
+<script src="league.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>
